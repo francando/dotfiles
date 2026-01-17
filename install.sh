@@ -30,14 +30,17 @@ rm -f ~/.tmux.conf
 echo "Stowing configurations..."
 stow nvim
 stow tmux
+stow alacritty
 
+TPM_DIR="$HOME/.config/tmux/plugins/tpm"
 # 5. Install Tmux Plugin Manager (TPM) if not present
-if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
-    echo "Installing Tmux Plugin Manager..."
-    git clone https://github.com ~/.tmux/plugins/tpm
+if [ ! -d "$TPM_DIR" ]; then
+    echo "Installing Tmux Plugin Manager to $TPM_DIR..."
+    git clone https://github.com "$TPM_DIR"
+    echo "Installing plugins..."
+    "$TPM_DIR/bin/install_plugins"
 fi
 
 echo "✅ Setup Complete!"
 echo "Open 'nvim' to trigger plugin installation."
-echo "Open 'tmux' and press 'Prefix + I' to install tmux plugins."
 
