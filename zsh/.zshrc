@@ -3,6 +3,7 @@ autoload -Uz compinit && compinit
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}' # Case-insensitive
 zstyle ':completion:*' menu select                 # Visual menu
 setopt AUTO_CD                                     # Type dir name to 'cd'
+export GIT_EDITOR=nvim
 
 # --- 2. HISTORY ---
 HISTFILE=~/.zsh_history
