@@ -107,7 +107,7 @@ echo "🚀 Starting Dotfiles Bootstrap..."
 
 # 1. Essential System Tools
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    sudo apt update && sudo apt install -y stow curl git
+    sudo apt update && sudo apt install -y stow curl git python3-venv
 fi
 
 # 2. Execute Tool Setups

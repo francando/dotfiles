@@ -756,7 +756,7 @@ require('lazy').setup({
 
       require('mason-lspconfig').setup {
         ensure_installed = {
-          'pyright',
+          'basedpyright',
           'clangd',
           'texlab',
         }, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
