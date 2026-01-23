@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+COMMAND="${1:-}"
+shift || true
+
+SCRIPTS_DIR="$DOTFILES_ROOT/scripts"
+
+# Dynamically detect subcommands
+SUBCOMMANDS=()
+while IFS= read -r file; do
+    SUBCOMMANDS+=("$(basename "$file" | sed -E 's/^dev-//; s/\.sh$//')")
+done < <(ls "$SCRIPTS_DIR"/dev-*.sh 2>/dev/null)
+
+# Dispatch
+if [[ " ${SUBCOMMANDS[*]} " == *" $COMMAND "* ]]; then
+    "$SCRIPTS_DIR/dev-$COMMAND.sh" "$@"
+else
+    echo "Usage: dev {${SUBCOMMANDS[*]}}"
+    exit 1
+fi

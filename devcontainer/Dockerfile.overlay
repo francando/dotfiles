@@ -1,0 +1,32 @@
+#Dockerfile
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+
+USER root
+# Dockerfile.overlay
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# switch back to root to install packages
+USER root
+
+# fix permissions just in case (optional but safe)
+RUN mkdir -p /var/lib/apt/lists/partial && chmod -R 755 /var/lib/apt/lists
+
+
+# this extra layer for tmux-centrinc dev
+RUN apt update && \
+    apt install -y \
+      tmux \
+      git \
+      curl \
+      ca-certificates && \
+    rm -rf /var/lib/apt/lists
+
+RUN curl -Lo /usr/local/bin/nvim \
+    https://github.com/neovim/neovim/releases/download/stable/nvim.appimage \
+    && chmod +x /usr/local/bin/nvim
+
+USER dev
+WORKDIR /workspace

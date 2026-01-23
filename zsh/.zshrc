@@ -3,7 +3,14 @@ autoload -Uz compinit && compinit
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}' # Case-insensitive
 zstyle ':completion:*' menu select                 # Visual menu
 setopt AUTO_CD                                     # Type dir name to 'cd'
+
 export GIT_EDITOR=nvim
+export DOTFILES_ROOT="${DOTFILES_ROOT:-$HOME/dotfiles}"
+
+# add bins 
+if [[ ":$PATH:" != *":$DOTFILES_ROOT/bin:"* ]]; then
+    export PATH="$DOTFILES_ROOT/bin:$PATH"
+fi
 
 # --- 2. HISTORY ---
 HISTFILE=~/.zsh_history
