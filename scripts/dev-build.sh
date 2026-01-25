@@ -3,7 +3,7 @@ set -euo pipefail
 
 source "$DOTFILES_ROOT/scripts/utils.sh"
 
-echo "→ Resolving build strategy…"
+log "Resolving build strategy…"
 
 # ---------- Case 1: devcontainer.json ----------
 if DEVCONTAINER_JSON="$(find_devcontainer 2>/dev/null)"; then
@@ -39,8 +39,11 @@ if DEVCONTAINER_JSON="$(find_devcontainer 2>/dev/null)"; then
             -t repo-base:dev \
             "$CONTEXT"
 
+        echo "$USER"
+
         docker build \
             --build-arg BASE_IMAGE=repo-base:dev \
+            --build-arg USERNAME="$USER" \
             -f "$DOTFILES_ROOT/devcontainer/Dockerfile.overlay" \
             -t dev-env:latest \
             "$DOTFILES_ROOT"
@@ -65,7 +68,9 @@ if [[ -f Dockerfile ]]; then
     docker build -t "$PROJECT_NAME:latest" .
 
     docker build \
-        --build-arg BASE_IMAGE="$PROJECT_NAME" \
+        --no-cache \
+        --build-arg BASE_IMAGE="$PROJECT_NAME:latest" \
+        --build-arg USERNAME="$USER" \
         -f "$DOTFILES_ROOT/devcontainer/Dockerfile.overlay" \
         -t "$PROJECT_NAME:dev" \
         "$DOTFILES_ROOT"

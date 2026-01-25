@@ -6,6 +6,11 @@ setopt AUTO_CD                                     # Type dir name to 'cd'
 
 export GIT_EDITOR=nvim
 export DOTFILES_ROOT="${DOTFILES_ROOT:-$HOME/dotfiles}"
+export TERM=xterm-256color
+export LANG=en_US.UTF-8
+export LANGUAGE=en_US
+export LC_ALL=en_US.UTF-8
+
 
 # add bins 
 if [[ ":$PATH:" != *":$DOTFILES_ROOT/bin:"* ]]; then

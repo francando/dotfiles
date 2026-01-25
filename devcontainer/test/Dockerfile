@@ -17,5 +17,3 @@ RUN useradd -m -s /bin/bash dev && \
 USER dev
 WORKDIR /workspace
 
-CMD ["bash"]
-
