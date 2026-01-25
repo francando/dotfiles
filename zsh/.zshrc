@@ -38,21 +38,30 @@ CLR_RESET="%f"
 function git_info() {
   local branch=$(git branch --show-current 2>/dev/null)
   if [ -n "$branch" ]; then
-    echo " ${CLR_GIT}\ue725 $branch${CLR_RESET}"
+    echo " ${CLR_GIT}%{\ue725%} $branch${CLR_RESET}"
   fi
 }
 
+function container_info() {
+  # Strong signal: your dev workflow flag
+  if [[ "${DEV_CONTAINER_ACTIVE:-0}" == "1" ]]; then
+#    echo " ${CLR_PURPLE} ${CLR_RESET}"
+    echo " ${CLR_PURPLE}%{\uf308%}%{${CLR_RESET}%}"
+    return
+  fi
 
-# Prompt: [user] at [host] in [CWD] [git]
-# %~ shows the CWD relative to home
-PROMPT="${CLR_BLUE}%n${CLR_WHITE}@${CLR_HOST}%m ${CLR_GREEN}%B%~%b${CLR_RESET}"
+  # Generic docker detection
+  if [[ -f /.dockerenv ]] || grep -qE '(docker|containerd|kubepods)' /proc/1/cgroup 2>/dev/null; then
+    #echo " ${CLR_PURPLE}[ctr]${CLR_RESET}"
+    echo " ${CLR_PURPLE}%{\uf308%}%{${CLR_RESET}%}"
+  fi
+}
+
+PROMPT="%{${CLR_BLUE}%}%n%{${CLR_WHITE}%}@%{${CLR_HOST}%}%m"
+PROMPT+='$(container_info)'
+PROMPT+=" %{${CLR_GREEN}%}%B%~%b%{${CLR_RESET}%}"
 PROMPT+='$(git_info)'
-PROMPT+="${CLR_PURPLE} ❯ ${CLR_RESET}"
-
-# --- 4. THEME ---
-if [ -f ~/.zsh/catppuccin_macchiato-zsh-syntax-highlighting.zsh ]; then
-  source ~/.zsh/catppuccin_macchiato-zsh-syntax-highlighting.zsh
-fi
+PROMPT+="%{${CLR_PURPLE}%} ❯ %{${CLR_RESET}%}"
 
 # --- 5. APT PLUGINS  ---
 # Syntax Highlighting
@@ -61,7 +70,6 @@ source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh 2>/dev/nul
 source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/null
 
 # --- 6. Keybindings ---
-bindkey '^H' backward-kill-word
 bindkey '^[[1;5D' backward-word
 bindkey '^[[1;5C' forward-word
 

@@ -15,7 +15,7 @@ fi
 setup_alacritty() {
     echo "🖥️  Setting up Alacritty..."
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        sudo apt install -y alacritty
+        sudo snap install --classic alacritty
     fi
     rm -rf ~/.config/alacritty
     stow alacritty
