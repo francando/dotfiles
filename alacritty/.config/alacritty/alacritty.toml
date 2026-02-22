@@ -1,6 +1,7 @@
+[general]
 import = ["~/.config/alacritty/themes/catppuccin_mocha.toml"]
 
-[shell]
+[terminal.shell]
 program ="/usr/bin/zsh"
 args= ["--login"]
 
