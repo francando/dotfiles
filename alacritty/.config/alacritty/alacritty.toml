@@ -47,3 +47,7 @@ key = "Back"
 mods = "Control"
 chars = "\u0017"
 
+[[keyboard.bindings]]
+key = "L"
+mods = "Control"
+chars = "\u000C"
