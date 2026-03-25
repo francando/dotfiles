@@ -211,6 +211,24 @@ vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left wind
 vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+vim.keymap.set('n', '<leader>sv', function()
+  vim.cmd 'source $MYVIMRC'
+  print 'Config reloaded ✅'
+end, { desc = 'Reload nvim config' })
+
+vim.opt.makeprg = 'cmake --build build'
+
+vim.keymap.set('n', '<leader>rc', function()
+  vim.cmd 'make'
+end, { silent = false, desc = 'build' })
+
+vim.keymap.set('n', '<leader>rr', function()
+  local file = vim.fn.expand '%'
+  local exe = vim.fn.expand '%<'
+
+  local cmd = string.format('gcc -O0 -Wall -Wpedantic %s -o %s && ./%s', file, exe, exe)
+  vim.cmd('botright split | terminal ' .. cmd)
+end)
 
 -- NOTE: Some terminals have colliding keymaps or are not able to send distinct keycodes
 -- vim.keymap.set("n", "<C-S-h>", "<C-w>H", { desc = "Move window to the left" })
@@ -531,7 +549,9 @@ require('lazy').setup({
       'WhoIsSethDaniel/mason-tool-installer.nvim',
 
       -- Useful status updates for LSP.
-      { 'j-hui/fidget.nvim', opts = {} },
+      { 'j-hui/fidget.nvim', opts = {
+        notification = { window = { winblend = 0 } },
+      } },
 
       -- Allows extra capabilities provided by blink.cmp
       'saghen/blink.cmp',
@@ -749,8 +769,9 @@ require('lazy').setup({
               completion = {
                 callSnippet = 'Replace',
               },
+              telemetry = { enable = false },
               -- You can toggle below to ignore Lua_LS's noisy `missing-fields` warnings
-              -- diagnostics = { disable = { 'missing-fields' } },
+              diagnostics = { disable = { 'missing-fields' } },
             },
           },
         },
@@ -782,6 +803,7 @@ require('lazy').setup({
           'basedpyright',
           'clangd',
           'texlab',
+          'lua_ls',
         }, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
         automatic_installation = false,
         handlers = {
@@ -899,7 +921,7 @@ require('lazy').setup({
         -- <c-k>: Toggle signature help
         --
         -- See :h blink-cmp-config-keymap for defining your own keymap
-        preset = 'default',
+        preset = 'super-tab',
 
         -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
         --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
@@ -945,6 +967,7 @@ require('lazy').setup({
     name = 'catppuccin',
     priority = 1000, -- Load this first
     config = function()
+      require('catppuccin').setup { transparent_background = true }
       vim.cmd.colorscheme 'catppuccin'
     end,
   },
@@ -1031,7 +1054,7 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
   -- require 'kickstart.plugins.autopairs',
