@@ -11,6 +11,9 @@ export DOTFILES_ROOT="${DOTFILES_ROOT:-$HOME/dotfiles}"
 if [[ ":$PATH:" != *":$DOTFILES_ROOT/bin:"* ]]; then
     export PATH="$DOTFILES_ROOT/bin:$PATH"
 fi
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    export PATH="$HOME/.local/bin:$PATH"
+fi
 
 # --- 2. HISTORY ---
 HISTFILE=~/.zsh_history
@@ -54,6 +57,28 @@ fi
 source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh 2>/dev/null
 # Autosuggestions
 source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/null
+
+# --- 7. ROS 2 (container): distro + colcon overlay so python/LSP see workspace pkgs
+if [[ -f /.dockerenv || -f /run/.containerenv || -n "${DEVCONTAINER:-}" ]]; then
+  if [[ -z "${AMENT_PREFIX_PATH:-}" ]]; then
+    for ros_setup in /opt/ros/*/setup.zsh; do
+      if [[ -r "$ros_setup" ]]; then
+        # shellcheck disable=SC1090
+        source "$ros_setup"
+        break
+      fi
+    done
+  fi
+  if [[ -z "${COLCON_PREFIX_PATH:-}" ]]; then
+    for ws in /ros2_ws /workspace "$PWD" "$PWD/.." "$PWD/../.."; do
+      if [[ -r "$ws/install/setup.zsh" ]]; then
+        # shellcheck disable=SC1091
+        source "$ws/install/setup.zsh"
+        break
+      fi
+    done
+  fi
+fi
 
 # --- 6. Keybindings ---
 bindkey '^H' backward-kill-word

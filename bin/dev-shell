@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Pane/window entrypoint: multiplexed SSH into the bound DevPod workspace.
+set -euo pipefail
+
+DOTFILES_ROOT="${DOTFILES_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+# shellcheck source=../scripts/utils.sh
+source "$DOTFILES_ROOT/scripts/utils.sh"
+
+require_host
+
+# Inherit workspace id from the current tmux session when unset
+if [[ -z "${DEV_WORKSPACE:-}" && -n "${TMUX:-}" ]]; then
+    DEV_WORKSPACE="$(tmux show-environment DEV_WORKSPACE 2>/dev/null | sed -n 's/^DEV_WORKSPACE=//p' || true)"
+    export DEV_WORKSPACE
+fi
+
+id="$(workspace_id)"
+
+# Hot path: no `devpod status` here (that alone costs seconds per pane).
+# Reuse ControlMaster when present; ssh fails fast if the workspace is down.
+ssh_workspace "$id"

@@ -1,0 +1,9 @@
+{
+  "name": "dotfiles-test",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "dev",
+  "workspaceFolder": "/workspace"
+}

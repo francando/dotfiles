@@ -12,20 +12,6 @@ require_devpod
 consume_common_flags "$@"
 set -- "${DEV_ARGS[@]}"
 
-force=0
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-    -y | --yes)
-        force=1
-        shift
-        ;;
-    *)
-        error "Unknown argument: $1"
-        exit 1
-        ;;
-    esac
-done
-
 id="$(workspace_id)"
 
 if ! workspace_exists "$id"; then
@@ -33,10 +19,6 @@ if ! workspace_exists "$id"; then
     exit 0
 fi
 
-if [[ "$force" -ne 1 ]]; then
-    confirm "Delete DevPod workspace '$id'?" || exit 0
-fi
-
-log "Deleting DevPod workspace: $id"
-devpod delete "$id" --ignore-not-found
-success "Deleted $id"
+log "Stopping DevPod workspace: $id"
+devpod stop "$id"
+success "Stopped $id"

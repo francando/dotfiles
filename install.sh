@@ -5,6 +5,12 @@ set -e
 
 DOTFILES_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
+# Inside DevPod / containers use the lean installer (stow + nvim/zsh)
+if [[ -f /.dockerenv || -f /run/.containerenv || -n "${DEVCONTAINER:-}" || -n "${REMOTE_CONTAINERS:-}" ]]; then
+    echo "→ Container detected — running install-devpod.sh"
+    exec "$DOTFILES_DIR/install-devpod.sh" "$@"
+fi
+
 if [[ "$OSTYPE" != "linux-gnu"* ]]; then
     echo "❌ Error: This setup is currently optimized for Linux (Ubuntu/Debian) only."
     echo "Detected OSTYPE: $OSTYPE"
@@ -19,6 +25,13 @@ setup_alacritty() {
     fi
     rm -rf ~/.config/alacritty
     stow alacritty
+
+    # Rewrite stowed config to this binary's schema (YAML→TOML, shell→terminal.shell, …)
+    if alacritty migrate --help >/dev/null 2>&1; then
+        echo "↪ Migrating Alacritty config ($(alacritty -V 2>/dev/null || echo unknown))…"
+        alacritty migrate --skip-imports || alacritty migrate || \
+            echo "⚠ alacritty migrate failed — config left as-is"
+    fi
 }
 
 setup_zsh() {

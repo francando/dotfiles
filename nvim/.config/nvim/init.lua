@@ -59,6 +59,21 @@ vim.g.maplocalleader = " "
 -- enable true color support
 vim.opt.termguicolors = true
 
+-- Alacritty 0.13 + nvim 0.11+: kitty key-event reporting makes Enter/Tab/BS
+-- fire twice (press + release) in every mode. Keep disambiguate, drop events.
+-- vim.api.nvim_create_autocmd("UIEnter", {
+-- 	callback = function()
+-- 		vim.schedule(function()
+-- 			io.stdout:write("\27[>1u")
+-- 		end)
+-- 	end,
+-- })
+-- vim.api.nvim_create_autocmd("VimLeavePre", {
+-- 	callback = function()
+-- 		io.stdout:write("\27[<1u")
+-- 	end,
+-- })
+
 -- make line numbers default
 vim.opt.number = true
 vim.opt.relativenumber = true
@@ -66,9 +81,31 @@ vim.opt.relativenumber = true
 -- enable mouse mode, can be useful for resizing splits
 vim.opt.mouse = "a"
 
--- sync clipboard between OS and neovim.
---  remove this option if you want your OS clipboard to remain independent.
---  see `:help 'clipboard'`
+-- Local: wl-copy/xclip. Remote/container: no display, so yank with OSC 52
+-- (escape sequence over SSH/tmux to the host terminal clipboard).
+if
+	vim.fn.executable("wl-copy") == 0
+	and vim.fn.executable("xclip") == 0
+	and vim.fn.executable("xsel") == 0
+	and vim.fn.executable("pbcopy") == 0
+then
+	local osc52 = require("vim.ui.clipboard.osc52")
+	vim.g.clipboard = {
+		name = "OSC 52",
+		copy = {
+			["+"] = osc52.copy("+"),
+			["*"] = osc52.copy("*"),
+		},
+		paste = {
+			["+"] = function()
+				return { vim.split(vim.fn.getreg('"'), "\n", { plain = true }), vim.fn.getregtype('"') }
+			end,
+			["*"] = function()
+				return { vim.split(vim.fn.getreg('"'), "\n", { plain = true }), vim.fn.getregtype('"') }
+			end,
+		},
+	}
+end
 vim.opt.clipboard = "unnamedplus"
 
 -- save undo history
@@ -118,6 +155,9 @@ vim.diagnostic.config({
 
 -- clear search highlights with <Esc>
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
+
+vim.keymap.set({ 'n', 'v' }, ';', ':')
+vim.keymap.set({ 'n', 'v' }, ':', ';')
 
 -- INFO: colorscheme
 vim.cmd.colorscheme("catppuccin")
@@ -186,6 +226,18 @@ require("blink.cmp").setup({
 		["<C-k>"] = { "show_signature", "hide_signature", "fallback" },
 	},
 
+	-- Cmdline ghost text looks like zsh-autosuggestions; Enter was accepting
+	-- the ghost first and only running the command on a second press.
+	cmdline = {
+		keymap = {
+			preset = "cmdline",
+			["<CR>"] = { "accept_and_enter", "fallback" },
+		},
+		completion = {
+			ghost_text = { enabled = false },
+		},
+	},
+
 	fuzzy = {
 		implementation = "lua",
 	},
@@ -193,15 +245,168 @@ require("blink.cmp").setup({
 
 -- INFO: lsp server installation and configuration
 
+-- Colcon workspaces are typically:
+--   <ws>/src/<repo>   git root / nvim cwd
+--   <ws>/install      ament prefixes (headers + python)
+local function is_colcon_ws(dir)
+	return vim.fn.isdirectory(dir .. "/install") == 1
+		and (
+			vim.fn.isdirectory(dir .. "/src") == 1
+			or vim.fn.filereadable(dir .. "/install/setup.bash") == 1
+		)
+end
+
+local function colcon_workspace_root(start)
+	local dir = vim.fs.normalize(start or vim.fn.getcwd())
+	while dir and dir ~= "/" do
+		if is_colcon_ws(dir) then
+			return dir
+		end
+		if vim.fn.fnamemodify(dir, ":t") == "src" and is_colcon_ws(vim.fs.dirname(dir)) then
+			return vim.fs.dirname(dir)
+		end
+		dir = vim.fs.dirname(dir)
+	end
+	return nil
+end
+
+-- extraPaths for ROS 2: source package dirs first (grd → src), then install/.
+local function ros_python_extra_paths(root_dir)
+	local paths, seen = {}, {}
+
+	local function add(path)
+		if not path or path == "" then
+			return
+		end
+		path = vim.fs.normalize(path)
+		if seen[path] or vim.fn.isdirectory(path) == 0 then
+			return
+		end
+		seen[path] = true
+		table.insert(paths, path)
+	end
+
+	local function add_glob(pattern)
+		for _, path in ipairs(vim.fn.glob(pattern, true, true)) do
+			add(path)
+		end
+	end
+
+	local function add_prefix_python(prefix)
+		add_glob(prefix .. "/lib/python*/site-packages")
+		add_glob(prefix .. "/lib/python*/dist-packages")
+		add_glob(prefix .. "/local/lib/python*/dist-packages")
+	end
+
+	local function is_generated(path)
+		return path:find("/install/", 1, true)
+			or path:find("/build/", 1, true)
+			or vim.endswith(path, "/install")
+			or vim.endswith(path, "/build")
+	end
+
+	local scan_root = vim.fs.root(root_dir or vim.fn.getcwd(), { ".git" })
+		or root_dir
+		or vim.fn.getcwd()
+	local ws_root = colcon_workspace_root(scan_root)
+		or colcon_workspace_root(vim.fn.getcwd())
+
+	add(scan_root .. "/src")
+	if ws_root then
+		add(ws_root .. "/src")
+	end
+
+	local search_roots = { scan_root }
+	if ws_root then
+		table.insert(search_roots, ws_root .. "/src")
+		table.insert(search_roots, ws_root)
+	end
+	local searched = {}
+	for _, search in ipairs(search_roots) do
+		if search and not searched[search] and vim.fn.isdirectory(search) == 1 then
+			searched[search] = true
+			for _, xml in ipairs(vim.fs.find("package.xml", { path = search, type = "file", limit = 400 })) do
+				local pkg_dir = vim.fs.dirname(xml)
+				if not is_generated(pkg_dir) then
+					add(pkg_dir)
+				end
+			end
+		end
+	end
+
+	add_glob("/opt/ros/*/lib/python*/site-packages")
+	add_glob("/opt/ros/*/lib/python*/dist-packages")
+	add_glob("/opt/ros/*/local/lib/python*/dist-packages")
+
+	-- generated msgs/srvs + installed copies; keep after source so grd prefers src
+	if ws_root then
+		add_prefix_python(ws_root .. "/install")
+		add_glob(ws_root .. "/install/*/lib/python*/site-packages")
+		add_glob(ws_root .. "/install/*/lib/python*/dist-packages")
+		add_glob(ws_root .. "/install/*/local/lib/python*/dist-packages")
+	end
+	add_glob("/ros2_ws/install/*/lib/python*/site-packages")
+	add_glob("/ros2_ws/install/*/lib/python*/dist-packages")
+	add_glob("/ros2_ws/install/*/local/lib/python*/dist-packages")
+
+	for prefix in string.gmatch(vim.env.AMENT_PREFIX_PATH or "", "[^:]+") do
+		add_prefix_python(prefix)
+	end
+	for prefix in string.gmatch(vim.env.COLCON_PREFIX_PATH or "", "[^:]+") do
+		add_prefix_python(prefix)
+	end
+	for path in string.gmatch(vim.env.PYTHONPATH or "", "[^:]+") do
+		add(path)
+	end
+
+	return paths
+end
+
 -- lsp servers we want to use and their configuration
 -- see `:h lspconfig-all` for available servers and their settings
 local lsp_servers = {
 	lua_ls = {
-		-- https://luals.github.io/wiki/settings/ | `:h nvim_get_runtime_file`
-		Lua = { workspace = { library = vim.api.nvim_get_runtime_file("lua", true) } },
+		settings = {
+			-- https://luals.github.io/wiki/settings/ | `:h nvim_get_runtime_file`
+			Lua = { workspace = { library = vim.api.nvim_get_runtime_file("lua", true) } },
+		},
 	},
 	clangd = {},
 	rust_analyzer = {},
+	basedpyright = {
+		settings = {
+			python = {
+				pythonPath = vim.fn.exepath("python3"),
+			},
+			basedpyright = {
+				analysis = {
+					autoSearchPaths = true,
+					diagnosticMode = "openFilesOnly",
+					exclude = {
+						"**/node_modules",
+						"**/__pycache__",
+						".git",
+						"**/install",
+						"**/build",
+						"**/log",
+					},
+				},
+			},
+		},
+		before_init = function(_, config)
+			local extra = ros_python_extra_paths(config.root_dir)
+			config.settings = vim.tbl_deep_extend("force", config.settings or {}, {
+				python = {
+					analysis = { extraPaths = extra },
+				},
+				basedpyright = {
+					analysis = {
+						extraPaths = extra,
+					},
+				},
+			})
+		end,
+	},
 }
 
 vim.pack.add({
@@ -225,17 +430,17 @@ require("mason-tool-installer").setup({
 -- to check what clients are attached to the current buffer, use
 -- `:checkhealth vim.lsp`. to view default lsp keybindings, use `:h lsp-defaults`.
 for server, config in pairs(lsp_servers) do
-	vim.lsp.config(server, {
-		settings = config,
-
-		-- only create the keymaps if the server attaches successfully
-		on_attach = function(_, bufnr)
-			vim.keymap.set("n", "grd", vim.lsp.buf.definition, { buffer = bufnr, desc = "vim.lsp.buf.definition()" })
-
-			vim.keymap.set("n", "grf", vim.lsp.buf.format, { buffer = bufnr, desc = "vim.lsp.buf.format()" })
-		end,
-	})
+	vim.lsp.config(server, config)
 end
+
+-- bind on LspAttach so every server gets the maps (including mason-enabled ones)
+vim.api.nvim_create_autocmd("LspAttach", {
+	callback = function(ev)
+		local bufnr = ev.buf
+		vim.keymap.set("n", "grd", vim.lsp.buf.definition, { buffer = bufnr, desc = "vim.lsp.buf.definition()" })
+		vim.keymap.set("n", "grf", vim.lsp.buf.format, { buffer = bufnr, desc = "vim.lsp.buf.format()" })
+	end,
+})
 
 -- INFO: fuzzy finder
 vim.pack.add({

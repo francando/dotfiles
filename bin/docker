@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Used only as DevPod's DOCKER_PATH. VS Code keeps calling /usr/bin/docker.
+# DevPod 0.6 cannot parse Ubuntu's `docker compose version` suffix
+# (e.g. 2.40.3+ds1-0ubuntu1~24). Lie for that subcommand; pass everything else through.
+set -euo pipefail
+
+real_docker() {
+    local self cand
+    self="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+    if [[ -n "${DOCKER_REAL:-}" && -x "${DOCKER_REAL}" ]]; then
+        echo "$DOCKER_REAL"
+        return 0
+    fi
+    while IFS= read -r cand; do
+        cand="$(readlink -f "$cand" 2>/dev/null || echo "$cand")"
+        if [[ "$cand" != "$self" && -x "$cand" ]]; then
+            echo "$cand"
+            return 0
+        fi
+    done < <(type -a -p docker 2>/dev/null)
+    echo "/usr/bin/docker"
+}
+
+DOCKER_BIN="$(real_docker)"
+
+# DevPod 0.6 feeds stdout into a semver parser (not a human-readable line).
+if [[ "${1:-}" == "compose" && "${2:-}" == "version" ]]; then
+    echo "2.40.3"
+    exit 0
+fi
+
+exec "$DOCKER_BIN" "$@"

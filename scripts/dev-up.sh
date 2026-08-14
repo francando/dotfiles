@@ -1,32 +1,46 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Source utils
-source "$(dirname "$0")/utils.sh"
+DOTFILES_ROOT="${DOTFILES_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+# shellcheck source=utils.sh
+source "$DOTFILES_ROOT/scripts/utils.sh"
 
-require_dotfiles_root
-require_docker
+ensure_dotfiles_root
+require_host
+require_devpod
+require_docker_compose_v2
 
-# Determine project image
-PROJECT_IMAGE="$(docker_image_name)" # e.g., dotfiles:dev
-log "→ Launching container from image: $PROJECT_IMAGE"
+consume_common_flags "$@"
+set -- "${DEV_ARGS[@]}"
 
-# Name of the container (optional: project-specific)
-CONTAINER_NAME="${PROJECT_IMAGE//[:]/_}-dev" # e.g., dotfiles_dev-dev
+recreate=0
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --recreate)
+        recreate=1
+        shift
+        ;;
+    *)
+        error "Unknown argument: $1"
+        exit 1
+        ;;
+    esac
+done
 
-# Check if container already exists
-if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-    info "Container already exists: $CONTAINER_NAME"
-else
-    log "→ Creating container..."
-    docker run -dit \
-        --name "$CONTAINER_NAME" \
-        -v "$HOME/.config:/home/dev/.config:cached" \
-        -v "$PWD:/workspace:cached" \
-        "$PROJECT_IMAGE" \
-        bash
+id="$(workspace_id)"
+root="$(repo_root)"
+
+args=("${DEVPOD_GLOBAL_FLAGS[@]}" up "$root" --id "$id" --ide none
+    --provider-option "DOCKER_PATH=$(devpod_docker_path)")
+if [[ "$recreate" -eq 1 ]]; then
+    args+=(--recreate)
 fi
 
-# Attach or start tmux inside container
-log "→ Attaching tmux session inside container..."
-docker exec -it "$CONTAINER_NAME" tmux new-session -A -s dev
+log "Starting DevPod workspace: $id"
+log "  source: $root"
+devpod "${args[@]}"
+success "Workspace $id is up"
+
+if ssh_host_configured "$id"; then
+    sync_dotfiles_to_workspace "$id" || warn "Dotfiles sync failed — try: dev sync --id $id"
+fi

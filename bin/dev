@@ -1,21 +1,51 @@
 #!/usr/bin/env bash
+# Host-side DevPod + tmux bridge: many tmux sessions per DevPod workspace.
 set -euo pipefail
+
+DOTFILES_ROOT="${DOTFILES_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+export DOTFILES_ROOT
 
 COMMAND="${1:-}"
 shift || true
 
 SCRIPTS_DIR="$DOTFILES_ROOT/scripts"
 
-# Dynamically detect subcommands
 SUBCOMMANDS=()
 while IFS= read -r file; do
     SUBCOMMANDS+=("$(basename "$file" | sed -E 's/^dev-//; s/\.sh$//')")
-done < <(ls "$SCRIPTS_DIR"/dev-*.sh 2>/dev/null)
+done < <(ls "$SCRIPTS_DIR"/dev-*.sh 2>/dev/null | sort)
 
-# Dispatch
-if [[ " ${SUBCOMMANDS[*]} " == *" $COMMAND "* ]]; then
-    "$SCRIPTS_DIR/dev-$COMMAND.sh" "$@"
-else
-    echo "Usage: dev {${SUBCOMMANDS[*]}}"
-    exit 1
+usage() {
+    echo "Usage: dev <command> [--id NAME] [args]"
+    echo ""
+    echo "Commands: ${SUBCOMMANDS[*]}"
+    echo ""
+    echo "  status   Show tmux session + DevPod workspace state"
+    echo "  up       Create/start DevPod workspace (--ide none)"
+    echo "           flags: --id NAME  --recreate  --debug"
+    echo "  sync     Push host ~/dotfiles into the running workspace and relink configs"
+    echo "  stop     Stop workspace (keep definition)"
+    echo "  down     Delete workspace"
+    echo "  enter    Ensure workspace up, sync dotfiles, then create a tmux session"
+    echo "           flags: --session NAME"
+    echo "  attach   Attach/switch to an existing tmux session for this workspace"
+    echo "           flags: --session NAME   (required if more than one)"
+    echo "  shell    SSH into workspace (no tmux)"
+    echo "  kill     Kill tmux session(s); optional --down to stop workspace"
+    echo "           flags: --session NAME  --all  --down"
+    echo ""
+    echo "Env: DEV_WORKSPACE, DEV_TMUX_SESSION, DEV_TMUX_PREFIX, DOTFILES_ROOT"
+}
+
+if [[ -z "$COMMAND" || "$COMMAND" == "-h" || "$COMMAND" == "--help" ]]; then
+    usage
+    exit 0
 fi
+
+if [[ " ${SUBCOMMANDS[*]} " == *" $COMMAND "* ]]; then
+    exec "$SCRIPTS_DIR/dev-$COMMAND.sh" "$@"
+fi
+
+echo "Unknown command: $COMMAND"
+usage
+exit 1
