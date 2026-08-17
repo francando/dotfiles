@@ -156,11 +156,18 @@ vim.diagnostic.config({
 -- clear search highlights with <Esc>
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 
+-- custom keymaps
 vim.keymap.set({ 'n', 'v' }, ';', ':')
 vim.keymap.set({ 'n', 'v' }, ':', ';')
+vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
+vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
+vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
+vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
 -- INFO: colorscheme
 vim.cmd.colorscheme("catppuccin")
+vim.cmd('highlight Normal ctermbg=none guibg=none')
+vim.cmd('highlight NonText ctermbg=none guibg=none')
 
 -- INFO: plugins
 -- we install plugins with neovim's builtin package manager: vim.pack
