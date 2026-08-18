@@ -206,6 +206,51 @@ vim.cmd('highlight NonText ctermbg=none guibg=none')
 -- 	end,
 -- })
 
+-- Install plugins (vim.pack.add is idempotent — safe to run every startup)
+vim.pack.add({
+  "https://github.com/nvim-lua/plenary.nvim",   -- neogit dependency
+  "https://github.com/lewis6991/gitsigns.nvim",
+  "https://github.com/NeogitOrg/neogit",
+  "https://github.com/sindrets/diffview.nvim",
+})
+
+-- gitsigns
+require("gitsigns").setup({
+  signs = {
+    add          = { text = "│" },
+    change       = { text = "│" },
+    delete       = { text = "_" },
+    topdelete    = { text = "‾" },
+    changedelete = { text = "~" },
+  },
+  current_line_blame = true,
+  on_attach = function(bufnr)
+    local gs = package.loaded.gitsigns
+    local map = function(mode, lhs, rhs, desc)
+      vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
+    end
+
+    map("n", "]c", function() gs.nav_hunk("next") end, "Next hunk")
+    map("n", "[c", function() gs.nav_hunk("prev") end, "Prev hunk")
+    map("n", "<leader>hs", gs.stage_hunk, "Stage hunk")
+    map("n", "<leader>hr", gs.reset_hunk, "Reset hunk")
+    map("n", "<leader>hp", gs.preview_hunk, "Preview hunk")
+    map("n", "<leader>hb", function() gs.blame_line({ full = true }) end, "Blame line")
+  end,
+})
+
+--- diffview
+require("diffview").setup()
+
+-- neogit
+require("neogit").setup({
+  kind = "floating", -- or "tab", "vsplit", "floating"
+	integrations = {diffview = true, },
+})
+vim.keymap.set("n", "<leader>gg", function() require("neogit").open() end, { desc = "Neogit" })
+vim.keymap.set("n", "<leader>gd", "<cmd>DiffviewOpen<CR>", { desc = "Diffview: open" })
+vim.keymap.set("n", "<leader>gh", "<cmd>DiffviewFileHistory %<CR>", { desc = "Diffview: file history" })
+
 vim.pack.add({ "https://github.com/saghen/blink.cmp" }, { confirm = false })
 
 require("blink.cmp").setup({
