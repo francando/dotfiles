@@ -136,8 +136,8 @@ vim.opt.breakindent = true
 vim.opt.wrap = true
 
 -- formatting
-vim.opt.tabstop = 2
-vim.opt.shiftwidth = 2
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
 vim.opt.expandtab = false
 vim.opt.textwidth = 80
 
@@ -157,17 +157,26 @@ vim.diagnostic.config({
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 
 -- custom keymaps
-vim.keymap.set({ 'n', 'v' }, ';', ':')
-vim.keymap.set({ 'n', 'v' }, ':', ';')
-vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
-vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
-vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+vim.keymap.set({ "n", "v" }, ";", ":")
+vim.keymap.set({ "n", "v" }, ":", ";")
+vim.keymap.set("n", "<C-h>", "<C-w><C-h>", { desc = "Move focus to the left window" })
+vim.keymap.set("n", "<C-l>", "<C-w><C-l>", { desc = "Move focus to the right window" })
+vim.keymap.set("n", "<C-j>", "<C-w><C-j>", { desc = "Move focus to the lower window" })
+vim.keymap.set("n", "<C-k>", "<C-w><C-k>", { desc = "Move focus to the upper window" })
+vim.keymap.set(
+	"n",
+	"<leader>so",
+	'<cmd>source $MYVIMRC<CR><cmd>echo "init.lua reloaded!"<CR>',
+	{ desc = "Reload init.lua" }
+)
+vim.keymap.set("i", "<C-H>", "<C-w>", { desc = "Delete word backward in insert mode" })
+vim.keymap.set("c", "<C-BS>", "<C-w>", { desc = "Delete word backward in command mode" })
+vim.keymap.set("c", "<C-H>", "<C-w>", { desc = "Delete word backward in command mode (fallback)" })
 
 -- INFO: colorscheme
 vim.cmd.colorscheme("catppuccin")
-vim.cmd('highlight Normal ctermbg=none guibg=none')
-vim.cmd('highlight NonText ctermbg=none guibg=none')
+vim.cmd("highlight Normal ctermbg=none guibg=none")
+vim.cmd("highlight NonText ctermbg=none guibg=none")
 
 -- INFO: plugins
 -- we install plugins with neovim's builtin package manager: vim.pack
@@ -208,35 +217,41 @@ vim.cmd('highlight NonText ctermbg=none guibg=none')
 
 -- Install plugins (vim.pack.add is idempotent — safe to run every startup)
 vim.pack.add({
-  "https://github.com/nvim-lua/plenary.nvim",   -- neogit dependency
-  "https://github.com/lewis6991/gitsigns.nvim",
-  "https://github.com/NeogitOrg/neogit",
-  "https://github.com/sindrets/diffview.nvim",
+	"https://github.com/nvim-lua/plenary.nvim", -- neogit dependency
+	"https://github.com/lewis6991/gitsigns.nvim",
+	"https://github.com/NeogitOrg/neogit",
+	"https://github.com/sindrets/diffview.nvim",
 })
 
 -- gitsigns
 require("gitsigns").setup({
-  signs = {
-    add          = { text = "│" },
-    change       = { text = "│" },
-    delete       = { text = "_" },
-    topdelete    = { text = "‾" },
-    changedelete = { text = "~" },
-  },
-  current_line_blame = true,
-  on_attach = function(bufnr)
-    local gs = package.loaded.gitsigns
-    local map = function(mode, lhs, rhs, desc)
-      vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
-    end
+	signs = {
+		add = { text = "│" },
+		change = { text = "│" },
+		delete = { text = "_" },
+		topdelete = { text = "‾" },
+		changedelete = { text = "~" },
+	},
+	current_line_blame = true,
+	on_attach = function(bufnr)
+		local gs = package.loaded.gitsigns
+		local map = function(mode, lhs, rhs, desc)
+			vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
+		end
 
-    map("n", "]c", function() gs.nav_hunk("next") end, "Next hunk")
-    map("n", "[c", function() gs.nav_hunk("prev") end, "Prev hunk")
-    map("n", "<leader>hs", gs.stage_hunk, "Stage hunk")
-    map("n", "<leader>hr", gs.reset_hunk, "Reset hunk")
-    map("n", "<leader>hp", gs.preview_hunk, "Preview hunk")
-    map("n", "<leader>hb", function() gs.blame_line({ full = true }) end, "Blame line")
-  end,
+		map("n", "]c", function()
+			gs.nav_hunk("next")
+		end, "Next hunk")
+		map("n", "[c", function()
+			gs.nav_hunk("prev")
+		end, "Prev hunk")
+		map("n", "<leader>hs", gs.stage_hunk, "Stage hunk")
+		map("n", "<leader>hr", gs.reset_hunk, "Reset hunk")
+		map("n", "<leader>hp", gs.preview_hunk, "Preview hunk")
+		map("n", "<leader>hb", function()
+			gs.blame_line({ full = true })
+		end, "Blame line")
+	end,
 })
 
 --- diffview
@@ -244,10 +259,12 @@ require("diffview").setup()
 
 -- neogit
 require("neogit").setup({
-  kind = "floating", -- or "tab", "vsplit", "floating"
-	integrations = {diffview = true, },
+	kind = "floating", -- or "tab", "vsplit", "floating"
+	integrations = { diffview = true },
 })
-vim.keymap.set("n", "<leader>gg", function() require("neogit").open() end, { desc = "Neogit" })
+vim.keymap.set("n", "<leader>gg", function()
+	require("neogit").open()
+end, { desc = "Neogit" })
 vim.keymap.set("n", "<leader>gd", "<cmd>DiffviewOpen<CR>", { desc = "Diffview: open" })
 vim.keymap.set("n", "<leader>gh", "<cmd>DiffviewFileHistory %<CR>", { desc = "Diffview: file history" })
 
@@ -302,10 +319,7 @@ require("blink.cmp").setup({
 --   <ws>/install      ament prefixes (headers + python)
 local function is_colcon_ws(dir)
 	return vim.fn.isdirectory(dir .. "/install") == 1
-		and (
-			vim.fn.isdirectory(dir .. "/src") == 1
-			or vim.fn.filereadable(dir .. "/install/setup.bash") == 1
-		)
+		and (vim.fn.isdirectory(dir .. "/src") == 1 or vim.fn.filereadable(dir .. "/install/setup.bash") == 1)
 end
 
 local function colcon_workspace_root(start)
@@ -357,11 +371,8 @@ local function ros_python_extra_paths(root_dir)
 			or vim.endswith(path, "/build")
 	end
 
-	local scan_root = vim.fs.root(root_dir or vim.fn.getcwd(), { ".git" })
-		or root_dir
-		or vim.fn.getcwd()
-	local ws_root = colcon_workspace_root(scan_root)
-		or colcon_workspace_root(vim.fn.getcwd())
+	local scan_root = vim.fs.root(root_dir or vim.fn.getcwd(), { ".git" }) or root_dir or vim.fn.getcwd()
+	local ws_root = colcon_workspace_root(scan_root) or colcon_workspace_root(vim.fn.getcwd())
 
 	add(scan_root .. "/src")
 	if ws_root then
@@ -514,6 +525,20 @@ vim.keymap.set("n", "<leader>sr", pickers.resume, { desc = "[S]earch [R]esume" }
 
 vim.keymap.set("n", "<leader>sh", pickers.help_tags, { desc = "[S]earch [H]elp" })
 vim.keymap.set("n", "<leader>sm", pickers.man_pages, { desc = "[S]earch [M]anuals" })
+
+-- dotfiles search
+vim.keymap.set("n", "<leader>sd", function()
+	pickers.find_files({
+		prompt_title = "Dotfiles",
+		cwd = vim.fn.expand("~/dotfiles"),
+		hidden = true,
+		file_ignore_patterns = {
+			"%.git/",
+			"%.git$",
+		},
+		no_ignore = false,
+	})
+end, { desc = "[S]earch [D]otfiles" })
 
 -- INFO: keybinding helper
 vim.pack.add({ "https://github.com/folke/which-key.nvim" }, { confirm = false })
