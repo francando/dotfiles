@@ -55,6 +55,7 @@
 -- must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
+vim.o.winborder = "bold"
 
 -- enable true color support
 vim.opt.termguicolors = true
@@ -152,6 +153,8 @@ vim.diagnostic.config({
 	},
 	virtual_text = true, -- show inline diagnostics
 })
+vim.opt.completeopt = { "menu", "menuone", "noselect", "noinsert" }
+
 
 -- clear search highlights with <Esc>
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
@@ -175,8 +178,8 @@ vim.keymap.set("c", "<C-H>", "<C-w>", { desc = "Delete word backward in command 
 
 -- INFO: colorscheme
 vim.cmd.colorscheme("catppuccin")
-vim.cmd("highlight Normal ctermbg=none guibg=none")
-vim.cmd("highlight NonText ctermbg=none guibg=none")
+-- vim.cmd("highlight Normal ctermbg=none guibg=none")
+-- vim.cmd("highlight NonText ctermbg=none guibg=none")
 
 -- INFO: plugins
 -- we install plugins with neovim's builtin package manager: vim.pack
